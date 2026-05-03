@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CourtConnect — Basketball Player Matching</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --orange: #E85D04;
+      --orange-light: #FFF0E6;
+      --orange-dark: #9C3F00;
+      --bg: #F2F2F2;
+      --surface: #FFFFFF;
+      --surface2: #F7F7F7;
+      --border: rgba(0,0,0,0.1);
+      --border-md: rgba(0,0,0,0.15);
+      --text: #1A1A1A;
+      --text-muted: #6B6B6B;
+      --text-hint: #ADADAD;
+      --green: #639922;
+      --green-light: #EAF3DE;
+      --blue: #185FA5;
+      --blue-light: #E6F1FB;
+      --amber: #BA7517;
+      --amber-light: #FAEEDA;
+      --red: #A32D2D;
+      --red-light: #FCEBEB;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    /* ── Phone frame ── */
+    .phone {
+      width: 375px;
+      background: var(--surface);
+      border-radius: 40px;
+      border: 8px solid #1A1A1A;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.05);
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* notch */
+    .notch {
+      background: #1A1A1A;
+      height: 28px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      padding-bottom: 4px;
+    }
+    .notch-pill {
+      width: 100px;
+      height: 14px;
+      background: #000;
+      border-radius: 10px;
+      border: 2px solid #2A2A2A;
+    }
+
+    /* status bar */
+    .status-bar {
+      background: var(--orange);
+      padding: 8px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+      color: #fff;
+      font-weight: 500;
+    }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+
+    /* screens */
+    .screen { display: none; }
+    .screen.active { display: block; animation: fadein 0.2s ease; }
+    @keyframes fadein { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* scrollable area */
+    .scroll-area {
+      overflow-y: auto;
+      max-height: 560px;
+      padding-bottom: 8px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .scroll-area::-webkit-scrollbar { width: 3px; }
+    .scroll-area::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+
+    /* ── Bottom nav ── */
+    .bottom-nav {
+      background: var(--surface);
+      border-top: 0.5px solid var(--border);
+      display: flex;
+      justify-content: space-around;
+      padding: 8px 0 14px;
+    }
+    .nav-item {
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      cursor: pointer; font-size: 10px; color: var(--text-muted);
+      transition: color 0.15s; padding: 4px 8px; border-radius: 8px;
+      user-select: none;
+    }
+    .nav-item.active { color: var(--orange); }
+    .nav-icon { width: 22px; height: 22px; }
+
+    /* ── Shared components ── */
+    .avatar {
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-weight: 600; flex-shrink: 0;
+    }
+    .av-orange { background: var(--orange-light); color: var(--orange-dark); }
+    .av-blue   { background: var(--blue-light); color: var(--blue); }
+    .av-green  { background: var(--green-light); color: #3B6D11; }
+    .av-purple { background: #EEEDFE; color: #3C3489; }
+
+    .tag { font-size: 10px; padding: 3px 9px; border-radius: 20px; font-weight: 500; display: inline-block; }
+    .tag-orange { background: var(--orange-light); color: var(--orange-dark); }
+    .tag-blue   { background: var(--blue-light); color: var(--blue); }
+    .tag-green  { background: var(--green-light); color: #3B6D11; }
+    .tag-amber  { background: var(--amber-light); color: var(--amber); }
+    .tag-gray   { background: var(--surface2); color: var(--text-muted); }
+
+    .tag-row { display: flex; flex-wrap: wrap; gap: 5px; }
+
+    .btn {
+      width: 100%; padding: 9px 12px; border-radius: 10px; font-size: 13px;
+      font-weight: 500; cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: opacity 0.15s, transform 0.1s; border: none;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--orange); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-outline { background: transparent; color: var(--orange); border: 1px solid var(--orange); }
+    .btn-outline:hover { background: var(--orange-light); }
+
+    .card {
+      margin: 0 16px 10px;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      padding: 14px;
+    }
+
+    .section-label {
+      padding: 14px 16px 8px;
+      font-size: 11px; font-weight: 500; color: var(--text-muted);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+
+    /* ── Screen headers ── */
+    .screen-header {
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+      padding: 16px 18px 20px;
+      color: #fff;
+    }
+    .screen-header h2 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 24px; letter-spacing: 1px;
+    }
+    .screen-header .sub { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+
+    /* ── Stars ── */
+    .stars { color: var(--orange); font-size: 12px; letter-spacing: 1px; }
+
+    /* ────────────────────────────────────────
+       HOME SCREEN
+    ──────────────────────────────────────── */
+    .home-header {
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+      padding: 18px 18px 28px;
+      color: #fff;
+    }
+    .home-header h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 30px; letter-spacing: 1.5px;
+    }
+    .home-header .tagline { font-size: 12px; opacity: 0.85; margin-top: 2px; }
+    .home-header .loc { font-size: 11px; opacity: 0.7; margin-top: 6px; }
+
+    .quick-stats {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+      padding: 0 16px; margin-top: -16px;
+    }
+    .qs-card {
+      background: var(--surface); border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); padding: 12px 8px; text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .qs-card .val {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 26px; color: var(--orange);
+    }
+    .qs-card .lbl { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+
+    .match-card-home {
+      margin: 0 16px 10px;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      padding: 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .match-card-home:hover { border-color: var(--orange); box-shadow: 0 2px 12px rgba(232,93,4,0.1); }
+
+    .mc-top { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .mc-info .name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .mc-info .role { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .dist { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+
+    .open-game-card {
+      margin: 0 16px 10px;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      padding: 14px;
+    }
+    .og-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .og-title { font-size: 14px; font-weight: 500; color: var(--text); }
+    .og-sub { font-size: 11px; color: var(--text-muted); }
+
+    /* ────────────────────────────────────────
+       MATCH SCREEN
+    ──────────────────────────────────────── */
+    .filter-bar { display: flex; gap: 7px; padding: 12px 16px; overflow-x: auto; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .chip {
+      white-space: nowrap; font-size: 11px; padding: 5px 12px;
+      border-radius: 20px; border: 0.5px solid var(--border-md);
+      cursor: pointer; background: var(--surface); color: var(--text-muted);
+      transition: all 0.15s; flex-shrink: 0; user-select: none;
+    }
+    .chip.on { background: var(--orange); color: #fff; border-color: var(--orange); }
+
+    .player-card {
+      margin: 0 16px 10px;
+      background: var(--surface);
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      padding: 14px;
+    }
+    .pc-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .pc-meta { flex: 1; }
+    .pc-name { font-size: 15px; font-weight: 500; color: var(--text); }
+    .pc-sub  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .rating-badge {
+      background: var(--orange); color: #fff;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 20px; padding: 4px 10px;
+      border-radius: var(--radius-sm); letter-spacing: 1px;
+    }
+
+    .stats-row {
+      display: flex; border: 0.5px solid var(--border);
+      border-radius: 10px; overflow: hidden; margin-bottom: 10px;
+    }
+    .stat-box { flex: 1; text-align: center; padding: 8px 4px; }
+    .stat-box:not(:last-child) { border-right: 0.5px solid var(--border); }
+    .stat-box .sv { font-size: 14px; font-weight: 600; color: var(--text); }
+    .stat-box .sl { font-size: 9px; color: var(--text-muted); margin-top: 1px; }
+
+    .avail-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 10px; }
+    .day-pill {
+      font-size: 10px; padding: 3px 7px; border-radius: 4px;
+      background: var(--green-light); color: #3B6D11; font-weight: 500;
+    }
+    .day-pill.off { background: var(--surface2); color: var(--text-hint); }
+
+    /* ────────────────────────────────────────
+       PROFILE SCREEN
+    ──────────────────────────────────────── */
+    .profile-hero {
+      background: linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+      padding: 24px 20px 28px; text-align: center; color: #fff;
+    }
+    .profile-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; font-weight: 600; margin: 0 auto 10px;
+    }
+    .profile-hero h2 { font-family: 'Bebas Neue', cursive; font-size: 26px; letter-spacing: 1px; }
+    .profile-hero .p-sub { font-size: 12px; opacity: 0.8; margin-top: 3px; }
+    .hero-stats { display: flex; justify-content: center; gap: 0; margin-top: 16px; }
+    .hero-stat { text-align: center; flex: 1; }
+    .hero-stat .hv { font-family: 'Bebas Neue', cursive; font-size: 24px; }
+    .hero-stat .hl { font-size: 10px; opacity: 0.75; }
+    .hero-divider { width: 1px; background: rgba(255,255,255,0.2); margin: 4px 0; }
+
+    .info-block {
+      background: var(--surface); border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); overflow: hidden;
+    }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 12px; border-bottom: 0.5px solid var(--border);
+      font-size: 13px;
+    }
+    .info-row:last-child { border-bottom: none; }
+    .info-row .lbl { color: var(--text-muted); }
+    .info-row .val { font-weight: 500; color: var(--text); }
+
+    .pos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .pos-box {
+      text-align: center; padding: 8px 4px; border-radius: 8px; font-size: 11px; font-weight: 500;
+    }
+    .pos-active { background: var(--orange-light); color: var(--orange-dark); border: 1px solid var(--orange); }
+    .pos-inactive { background: var(--surface2); color: var(--text-hint); border: 0.5px solid var(--border); }
+
+    .rep-card { background: var(--surface); border-radius: var(--radius-md); border: 0.5px solid var(--border); padding: 14px 16px; }
+    .rep-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; }
+    .rep-lbl { font-size: 12px; color: var(--text-muted); min-width: 94px; }
+    .rep-bar-bg { height: 6px; background: var(--surface2); border-radius: 3px; flex: 1; margin: 0 10px; overflow: hidden; }
+    .rep-bar { height: 100%; border-radius: 3px; background: var(--orange); transition: width 0.5s ease; }
+    .rep-val { font-size: 12px; font-weight: 500; color: var(--text); min-width: 20px; text-align: right; }
+
+    /* ────────────────────────────────────────
+       COURTS SCREEN
+    ──────────────────────────────────────── */
+    .map-box {
+      margin: 14px 16px 0;
+      height: 160px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      background: linear-gradient(135deg, #dff0ea 0%, #c8e6dd 100%);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: var(--text-muted); gap: 6px; font-size: 12px; position: relative; overflow: hidden;
+    }
+    .map-box::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: radial-gradient(circle, rgba(0,0,0,0.04) 1px, transparent 1px);
+      background-size: 18px 18px;
+    }
+    .map-pin { font-size: 28px; }
+
+    .court-card { margin: 10px 16px 0; background: var(--surface); border-radius: var(--radius-md); border: 0.5px solid var(--border); padding: 14px; }
+    .court-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .court-name { font-size: 14px; font-weight: 500; color: var(--text); }
+    .court-sub  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .dist-badge { font-size: 11px; background: var(--green-light); color: #3B6D11; padding: 3px 9px; border-radius: 6px; font-weight: 500; white-space: nowrap; }
+    .online-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-muted); margin: 6px 0 8px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green); }
+    .dot-amber { background: var(--amber); }
+
+    /* ────────────────────────────────────────
+       SCHEDULE SCREEN
+    ──────────────────────────────────────── */
+    .week-strip { display: flex; gap: 5px; padding: 12px 16px; }
+    .day-btn {
+      flex: 1; text-align: center; padding: 8px 2px;
+      border-radius: 10px; cursor: pointer; border: 0.5px solid var(--border);
+      background: var(--surface); user-select: none; transition: all 0.15s;
+    }
+    .day-btn.today { background: var(--orange); color: #fff; border-color: var(--orange); }
+    .day-btn .dn { font-size: 9px; font-weight: 500; }
+    .day-btn .dd { font-size: 16px; font-weight: 600; margin-top: 2px; }
+
+    .game-slot { margin: 0 16px 8px; background: var(--surface); border-radius: var(--radius-md); border: 0.5px solid var(--border); padding: 12px 14px; display: flex; gap: 12px; align-items: center; }
+    .time-col { text-align: center; min-width: 36px; }
+    .time-col .t { font-size: 13px; font-weight: 600; color: var(--orange); }
+    .time-col .am { font-size: 9px; color: var(--text-muted); }
+    .game-info { flex: 1; }
+    .gname { font-size: 13px; font-weight: 500; color: var(--text); }
+    .gsub  { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .game-status { font-size: 10px; padding: 3px 8px; border-radius: 6px; font-weight: 500; white-space: nowrap; }
+    .gs-confirmed { background: var(--green-light); color: #3B6D11; }
+    .gs-pending   { background: var(--amber-light); color: var(--amber); }
+    .gs-open      { background: var(--blue-light); color: var(--blue); }
+
+    .day-label { padding: 6px 16px 6px; font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- Notch -->
+  <div class="notch"><div class="notch-pill"></div></div>
+
+  <!-- Status bar -->
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="status-icons">
+      <!-- Signal -->
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="white">
+        <rect x="0" y="5" width="2" height="7" rx="1"/>
+        <rect x="3" y="3" width="2" height="9" rx="1"/>
+        <rect x="6" y="1" width="2" height="11" rx="1"/>
+        <rect x="9" y="0" width="2" height="12" rx="1"/>
+      </svg>
+      <!-- Wifi -->
+      <svg width="14" height="11" viewBox="0 0 14 11" fill="white">
+        <path d="M7 3C8.7 3 10.2 3.7 11.3 4.8L12.7 3.4C11.2 2 9.2 1 7 1C4.8 1 2.8 2 1.3 3.4L2.7 4.8C3.8 3.7 5.3 3 7 3Z"/>
+        <path d="M7 6C8.1 6 9.1 6.4 9.8 7.2L11.2 5.8C10.1 4.7 8.6 4 7 4C5.4 4 3.9 4.7 2.8 5.8L4.2 7.2C4.9 6.4 5.9 6 7 6Z"/>
+        <circle cx="7" cy="10" r="1.5"/>
+      </svg>
+      <!-- Battery -->
+      <svg width="22" height="11" viewBox="0 0 22 11" fill="none">
+        <rect x="0.5" y="0.5" width="18" height="10" rx="2.5" stroke="white" stroke-opacity="0.5"/>
+        <rect x="1.5" y="1.5" width="13" height="8" rx="1.5" fill="white"/>
+        <path d="M20 3.5V7.5C20.8 7.2 21.5 6.4 21.5 5.5C21.5 4.6 20.8 3.8 20 3.5Z" fill="white" fill-opacity="0.4"/>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       HOME SCREEN
+  ══════════════════════════════════════ -->
+  <div id="screen-home" class="screen active">
+    <div class="home-header">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div>
+          <h1>CourtConnect</h1>
+          <div class="tagline">Find your next game</div>
+          <div class="loc">📍 Naga City, Camarines Sur</div>
+        </div>
+        <div class="avatar av-orange" style="width:38px;height:38px;font-size:13px;border:2px solid rgba(255,255,255,0.35);">JR</div>
+      </div>
+    </div>
+
+    <div class="quick-stats">
+      <div class="qs-card"><div class="val">12</div><div class="lbl">Games played</div></div>
+      <div class="qs-card"><div class="val">8</div><div class="lbl">Near you</div></div>
+      <div class="qs-card"><div class="val">74</div><div class="lbl">My rating</div></div>
+    </div>
+
+    <div class="section-label">Suggested matches</div>
+
+    <div class="match-card-home" onclick="goTo('match')">
+      <div class="mc-top">
+        <div class="avatar av-blue" style="width:42px;height:42px;font-size:15px;">MR</div>
+        <div class="mc-info" style="flex:1;">
+          <div class="name">Marco Reyes</div>
+          <div class="role">Point Guard · Rating 78</div>
+        </div>
+        <span class="dist">1.2 km</span>
+      </div>
+      <div class="tag-row" style="margin-bottom:10px;">
+        <span class="tag tag-orange">Playmaker</span>
+        <span class="tag tag-blue">Intermediate</span>
+        <span class="tag tag-gray">Avail. Today</span>
+      </div>
+      <button class="btn btn-primary">View Profile ↗</button>
+    </div>
+
+    <div class="match-card-home">
+      <div class="mc-top">
+        <div class="avatar av-green" style="width:42px;height:42px;font-size:15px;">AL</div>
+        <div class="mc-info" style="flex:1;">
+          <div class="name">Andrea Lim</div>
+          <div class="role">Shooting Guard · Rating 82</div>
+        </div>
+        <span class="dist">2.8 km</span>
+      </div>
+      <div class="tag-row" style="margin-bottom:10px;">
+        <span class="tag tag-green">Shooter</span>
+        <span class="tag tag-blue">Advanced</span>
+        <span class="tag tag-gray">PM slots</span>
+      </div>
+      <button class="btn btn-outline">Send invite</button>
+    </div>
+
+    <div class="section-label">Open games nearby</div>
+
+    <div class="open-game-card">
+      <div class="og-top">
+        <div class="og-title">5-on-5 @ Naga Sports Complex</div>
+        <span class="tag tag-green">Open</span>
+      </div>
+      <div class="og-sub" style="margin-bottom:10px;">Today · 4:00 PM · 3 slots left</div>
+      <button class="btn btn-primary">Join Game</button>
+    </div>
+
+    <div class="open-game-card" style="margin-top:10px;">
+      <div class="og-top">
+        <div class="og-title">3-on-3 @ Plaza Court</div>
+        <span class="tag tag-amber">2 slots left</span>
+      </div>
+      <div class="og-sub" style="margin-bottom:10px;">Tomorrow · 7:00 AM · Casual</div>
+      <button class="btn btn-outline">Request to Join</button>
+    </div>
+
+    <div style="height:12px;"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       MATCH SCREEN
+  ══════════════════════════════════════ -->
+  <div id="screen-match" class="screen">
+    <div class="screen-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <h2>Find Players</h2>
+          <div class="sub">Naga City · 20 km radius</div>
+        </div>
+        <div style="background:rgba(255,255,255,0.2);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;">⚙ Filters</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="chip on">All</div>
+      <div class="chip">PG</div>
+      <div class="chip">SG</div>
+      <div class="chip">SF</div>
+      <div class="chip">PF</div>
+      <div class="chip">Center</div>
+      <div class="chip">Flex</div>
+    </div>
+
+    <div class="scroll-area">
+      <!-- Player 1 -->
+      <div class="player-card">
+        <div class="pc-head">
+          <div class="avatar av-blue" style="width:50px;height:50px;font-size:17px;">MR</div>
+          <div class="pc-meta">
+            <div class="pc-name">Marco Reyes</div>
+            <div class="pc-sub">PG · 23 y/o · 5'10" · Naga City</div>
+            <div class="stars">★★★★☆</div>
+          </div>
+          <div class="rating-badge">78</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="sv">14.2</div><div class="sl">PPG</div></div>
+          <div class="stat-box"><div class="sv">7.1</div><div class="sl">AST</div></div>
+          <div class="stat-box"><div class="sv">4.3</div><div class="sl">REB</div></div>
+          <div class="stat-box"><div class="sv">68%</div><div class="sl">Win rate</div></div>
+        </div>
+        <div class="tag-row" style="margin-bottom:8px;">
+          <span class="tag tag-orange">Playmaker</span>
+          <span class="tag tag-blue">Defender</span>
+          <span class="tag tag-gray">Casual</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Availability</div>
+        <div class="avail-row">
+          <span class="day-pill">Mon</span>
+          <span class="day-pill off">Tue</span>
+          <span class="day-pill">Wed</span>
+          <span class="day-pill off">Thu</span>
+          <span class="day-pill">Fri</span>
+          <span class="day-pill">Sat</span>
+          <span class="day-pill">Sun</span>
+        </div>
+        <button class="btn btn-primary">Send Match Request</button>
+      </div>
+
+      <!-- Player 2 -->
+      <div class="player-card">
+        <div class="pc-head">
+          <div class="avatar av-green" style="width:50px;height:50px;font-size:17px;">AL</div>
+          <div class="pc-meta">
+            <div class="pc-name">Andrea Lim</div>
+            <div class="pc-sub">SG · 21 y/o · 5'7" · Naga City</div>
+            <div class="stars">★★★★★</div>
+          </div>
+          <div class="rating-badge">82</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="sv">18.5</div><div class="sl">PPG</div></div>
+          <div class="stat-box"><div class="sv">3.2</div><div class="sl">AST</div></div>
+          <div class="stat-box"><div class="sv">5.0</div><div class="sl">REB</div></div>
+          <div class="stat-box"><div class="sv">75%</div><div class="sl">Win rate</div></div>
+        </div>
+        <div class="tag-row" style="margin-bottom:8px;">
+          <span class="tag tag-green">Shooter</span>
+          <span class="tag tag-orange">Slasher</span>
+          <span class="tag tag-blue">Competitive</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Availability</div>
+        <div class="avail-row">
+          <span class="day-pill off">Mon</span>
+          <span class="day-pill">Tue</span>
+          <span class="day-pill">Wed</span>
+          <span class="day-pill">Thu</span>
+          <span class="day-pill off">Fri</span>
+          <span class="day-pill">Sat</span>
+          <span class="day-pill">Sun</span>
+        </div>
+        <button class="btn btn-primary">Send Match Request</button>
+      </div>
+
+      <!-- Player 3 -->
+      <div class="player-card">
+        <div class="pc-head">
+          <div class="avatar av-purple" style="width:50px;height:50px;font-size:17px;">BS</div>
+          <div class="pc-meta">
+            <div class="pc-name">Bong Santos</div>
+            <div class="pc-sub">C · 27 y/o · 6'4" · Naga City</div>
+            <div class="stars">★★★★☆</div>
+          </div>
+          <div class="rating-badge">71</div>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="sv">9.8</div><div class="sl">PPG</div></div>
+          <div class="stat-box"><div class="sv">1.5</div><div class="sl">AST</div></div>
+          <div class="stat-box"><div class="sv">11.2</div><div class="sl">REB</div></div>
+          <div class="stat-box"><div class="sv">60%</div><div class="sl">Win rate</div></div>
+        </div>
+        <div class="tag-row" style="margin-bottom:8px;">
+          <span class="tag tag-orange">Rebounder</span>
+          <span class="tag tag-blue">Defender</span>
+          <span class="tag tag-gray">Casual</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">Availability</div>
+        <div class="avail-row">
+          <span class="day-pill">Mon</span>
+          <span class="day-pill">Tue</span>
+          <span class="day-pill off">Wed</span>
+          <span class="day-pill off">Thu</span>
+          <span class="day-pill">Fri</span>
+          <span class="day-pill off">Sat</span>
+          <span class="day-pill">Sun</span>
+        </div>
+        <button class="btn btn-outline">Send Match Request</button>
+      </div>
+
+      <div style="height:8px;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       PROFILE SCREEN
+  ══════════════════════════════════════ -->
+  <div id="screen-profile" class="screen">
+    <div class="profile-hero">
+      <div class="profile-avatar">JR</div>
+      <h2>Juan Reyes</h2>
+      <div class="p-sub">Small Forward · Rating 74 · Naga City</div>
+      <div class="hero-stats">
+        <div class="hero-stat"><div class="hv">12</div><div class="hl">Games</div></div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat"><div class="hv">8</div><div class="hl">Wins</div></div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat"><div class="hv">66%</div><div class="hl">Win rate</div></div>
+        <div class="hero-divider"></div>
+        <div class="hero-stat"><div class="hv">4.5</div><div class="hl">Stars</div></div>
+      </div>
+    </div>
+
+    <div class="scroll-area">
+
+      <div class="section-label">Physical attributes</div>
+      <div style="margin:0 16px;" class="info-block">
+        <div class="info-row"><span class="lbl">Height</span><span class="val">6'1"</span></div>
+        <div class="info-row"><span class="lbl">Weight</span><span class="val">80 kg</span></div>
+        <div class="info-row"><span class="lbl">Age</span><span class="val">24</span></div>
+        <div class="info-row"><span class="lbl">Wingspan</span><span class="val">6'3"</span></div>
+        <div class="info-row"><span class="lbl">Gender</span><span class="val">Male</span></div>
+      </div>
+
+      <div class="section-label">Playing positions</div>
+      <div style="margin:0 16px;" class="pos-grid">
+        <div class="pos-box pos-inactive">PG</div>
+        <div class="pos-box pos-inactive">SG</div>
+        <div class="pos-box pos-active">SF ✓</div>
+        <div class="pos-box pos-active">PF ✓</div>
+        <div class="pos-box pos-inactive">C</div>
+        <div class="pos-box pos-active">Flex ✓</div>
+      </div>
+
+      <div class="section-label">Skill level</div>
+      <div style="margin:0 16px;" class="info-block">
+        <div class="info-row"><span class="lbl">Level</span><span class="val" style="color:var(--orange);font-weight:600;">Intermediate</span></div>
+        <div class="info-row"><span class="lbl">ELO Rating</span><span class="val">74 / 100</span></div>
+        <div class="info-row"><span class="lbl">Preference</span><span class="val">Competitive</span></div>
+      </div>
+
+      <div class="section-label">Performance stats</div>
+      <div style="margin:0 16px;" class="info-block">
+        <div class="info-row"><span class="lbl">Points / game</span><span class="val">11.4</span></div>
+        <div class="info-row"><span class="lbl">Assists</span><span class="val">3.2</span></div>
+        <div class="info-row"><span class="lbl">Rebounds</span><span class="val">7.8</span></div>
+        <div class="info-row"><span class="lbl">Steals</span><span class="val">1.4</span></div>
+        <div class="info-row"><span class="lbl">Blocks</span><span class="val">0.9</span></div>
+        <div class="info-row"><span class="lbl">Win rate</span><span class="val">66%</span></div>
+      </div>
+
+      <div class="section-label">Play style</div>
+      <div style="margin:0 16px 4px;" class="tag-row">
+        <span class="tag tag-orange">Slasher</span>
+        <span class="tag tag-blue">Defender</span>
+        <span class="tag tag-green">Rebounder</span>
+        <span class="tag tag-gray">Competitive</span>
+      </div>
+
+      <div class="section-label">Availability</div>
+      <div style="margin:0 16px;" class="info-block">
+        <div class="info-row"><span class="lbl">Days</span><span class="val">Mon · Wed · Fri · Sat</span></div>
+        <div class="info-row"><span class="lbl">Time slots</span><span class="val">Morning · Afternoon</span></div>
+        <div class="info-row"><span class="lbl">Game duration</span><span class="val">1–2 hours</span></div>
+      </div>
+
+      <div class="section-label">Reputation</div>
+      <div style="margin:0 16px;" class="rep-card">
+        <div class="rep-row">
+          <span class="rep-lbl">Sportsmanship</span>
+          <div class="rep-bar-bg"><div class="rep-bar" style="width:88%;"></div></div>
+          <span class="rep-val">4.4</span>
+        </div>
+        <div class="rep-row">
+          <span class="rep-lbl">Reliability</span>
+          <div class="rep-bar-bg"><div class="rep-bar" style="width:95%;background:var(--green);"></div></div>
+          <span class="rep-val">4.8</span>
+        </div>
+        <div class="rep-row">
+          <span class="rep-lbl">No-shows</span>
+          <div class="rep-bar-bg"><div class="rep-bar" style="width:5%;background:#E24B4A;"></div></div>
+          <span class="rep-val">0</span>
+        </div>
+      </div>
+
+      <div style="margin:12px 16px 4px;">
+        <button class="btn btn-outline">Edit Profile</button>
+      </div>
+
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       COURTS SCREEN
+  ══════════════════════════════════════ -->
+  <div id="screen-courts" class="screen">
+    <div class="screen-header">
+      <h2>Nearby Courts</h2>
+      <div class="sub">Naga City, Camarines Sur · 20 km radius</div>
+    </div>
+
+    <div class="map-box">
+      <div class="map-pin">📍</div>
+      <span>Map view · Naga City</span>
+    </div>
+
+    <div class="scroll-area" style="padding-top:10px;">
+
+      <div class="court-card">
+        <div class="court-top">
+          <div>
+            <div class="court-name">Naga Sports Complex</div>
+            <div class="court-sub">Panganiban Dr · Outdoor · 2 full courts</div>
+          </div>
+          <span class="dist-badge">0.8 km</span>
+        </div>
+        <div class="online-row"><div class="dot dot-green"></div>14 players checked in now</div>
+        <div class="tag-row" style="margin-bottom:10px;">
+          <span class="tag tag-green">Open</span>
+          <span class="tag tag-gray">Lights at night</span>
+          <span class="tag tag-blue">Free</span>
+        </div>
+        <button class="btn btn-primary">Check In Here</button>
+      </div>
+
+      <div class="court-card" style="margin-top:10px;">
+        <div class="court-top">
+          <div>
+            <div class="court-name">Ateneo de Naga Gym</div>
+            <div class="court-sub">Bagumbayan Sur · Indoor · 1 court</div>
+          </div>
+          <span class="dist-badge">1.4 km</span>
+        </div>
+        <div class="online-row"><div class="dot dot-amber"></div>Game in progress · 6 nearby</div>
+        <div class="tag-row" style="margin-bottom:10px;">
+          <span class="tag tag-orange">Busy</span>
+          <span class="tag tag-gray">Air conditioned</span>
+          <span class="tag tag-gray">Free</span>
+        </div>
+        <button class="btn btn-outline">View Schedule</button>
+      </div>
+
+      <div class="court-card" style="margin-top:10px;">
+        <div class="court-top">
+          <div>
+            <div class="court-name">Plaza Quince Martires</div>
+            <div class="court-sub">Centro · Outdoor · Street court</div>
+          </div>
+          <span class="dist-badge">2.1 km</span>
+        </div>
+        <div class="online-row"><div class="dot dot-green"></div>3 players online now</div>
+        <div class="tag-row" style="margin-bottom:10px;">
+          <span class="tag tag-blue">Pickup games</span>
+          <span class="tag tag-gray">Free</span>
+        </div>
+        <button class="btn btn-outline">Join Pickup</button>
+      </div>
+
+      <div class="court-card" style="margin-top:10px;">
+        <div class="court-top">
+          <div>
+            <div class="court-name">Naga City Coliseum</div>
+            <div class="court-sub">Concepcion Pequeña · Indoor · 2 courts</div>
+          </div>
+          <span class="dist-badge">3.5 km</span>
+        </div>
+        <div class="online-row"><div class="dot dot-green"></div>Open for booking</div>
+        <div class="tag-row" style="margin-bottom:10px;">
+          <span class="tag tag-green">Available</span>
+          <span class="tag tag-gray">Air conditioned</span>
+          <span class="tag tag-amber">₱200/hr</span>
+        </div>
+        <button class="btn btn-outline">Book Court</button>
+      </div>
+
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       SCHEDULE SCREEN
+  ══════════════════════════════════════ -->
+  <div id="screen-schedule" class="screen">
+    <div class="screen-header">
+      <h2>My Schedule</h2>
+      <div class="sub">May 2026</div>
+    </div>
+
+    <div class="week-strip">
+      <div class="day-btn"><div class="dn">Mon</div><div class="dd">4</div></div>
+      <div class="day-btn today"><div class="dn">Tue</div><div class="dd">5</div></div>
+      <div class="day-btn"><div class="dn">Wed</div><div class="dd">6</div></div>
+      <div class="day-btn"><div class="dn">Thu</div><div class="dd">7</div></div>
+      <div class="day-btn"><div class="dn">Fri</div><div class="dd">8</div></div>
+      <div class="day-btn"><div class="dn">Sat</div><div class="dd">9</div></div>
+      <div class="day-btn"><div class="dn">Sun</div><div class="dd">10</div></div>
+    </div>
+
+    <div class="scroll-area">
+
+      <div class="day-label">Tuesday, May 5</div>
+
+      <div class="game-slot">
+        <div class="time-col"><div class="t">7:00</div><div class="am">AM</div></div>
+        <div class="game-info">
+          <div class="gname">5-on-5 Pickup</div>
+          <div class="gsub">Naga Sports Complex · 1hr</div>
+        </div>
+        <span class="game-status gs-confirmed">Confirmed</span>
+      </div>
+
+      <div class="game-slot">
+        <div class="time-col"><div class="t">4:00</div><div class="am">PM</div></div>
+        <div class="game-info">
+          <div class="gname">3-on-3 with Marco</div>
+          <div class="gsub">Plaza Court · 45 min</div>
+        </div>
+        <span class="game-status gs-pending">Pending</span>
+      </div>
+
+      <div class="day-label" style="margin-top:6px;">Wednesday, May 6</div>
+
+      <div class="game-slot">
+        <div class="time-col"><div class="t">6:00</div><div class="am">PM</div></div>
+        <div class="game-info">
+          <div class="gname">League Game #3</div>
+          <div class="gsub">Ateneo de Naga Gym · 2hr</div>
+        </div>
+        <span class="game-status gs-confirmed">Confirmed</span>
+      </div>
+
+      <div class="game-slot">
+        <div class="time-col"><div class="t">8:00</div><div class="am">PM</div></div>
+        <div class="game-info">
+          <div class="gname">Open Run @ Complex</div>
+          <div class="gsub">Naga Sports Complex</div>
+        </div>
+        <span class="game-status gs-open">Open</span>
+      </div>
+
+      <div class="day-label" style="margin-top:6px;">Saturday, May 9</div>
+
+      <div class="game-slot">
+        <div class="time-col"><div class="t">8:00</div><div class="am">AM</div></div>
+        <div class="game-info">
+          <div class="gname">Weekend Warriors League</div>
+          <div class="gsub">Naga Coliseum · 2hr</div>
+        </div>
+        <span class="game-status gs-confirmed">Confirmed</span>
+      </div>
+
+      <div style="margin:10px 16px 4px;">
+        <button class="btn btn-primary">+ Schedule a Game</button>
+      </div>
+
+      <div style="height:12px;"></div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════
+       BOTTOM NAV
+  ══════════════════════════════════════ -->
+  <div class="bottom-nav">
+    <div class="nav-item active" id="nav-home" onclick="goTo('home')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      <span>Home</span>
+    </div>
+    <div class="nav-item" id="nav-match" onclick="goTo('match')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/>
+      </svg>
+      <span>Match</span>
+    </div>
+    <div class="nav-item" id="nav-courts" onclick="goTo('courts')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+      </svg>
+      <span>Courts</span>
+    </div>
+    <div class="nav-item" id="nav-schedule" onclick="goTo('schedule')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+      </svg>
+      <span>Schedule</span>
+    </div>
+    <div class="nav-item" id="nav-profile" onclick="goTo('profile')">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+      </svg>
+      <span>Profile</span>
+    </div>
+  </div>
+
+</div><!-- /phone -->
+
+<script>
+  function goTo(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.getElementById('nav-' + name).classList.add('active');
+  }
+
+  // Filter chips toggle
+  document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      chip.closest('.filter-bar').querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+      chip.classList.add('on');
+    });
+  });
+
+  // Week day selection
+  document.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.week-strip').querySelectorAll('.day-btn').forEach(b => b.classList.remove('today'));
+      btn.classList.add('today');
+    });
+  });
+</script>
+
+</body>
+</html>
